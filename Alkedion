@@ -1,0 +1,325 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local Stats = game:GetService("Stats")
+local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Camera = Workspace.CurrentCamera
+
+local lp = Players.LocalPlayer
+local pg = lp:WaitForChild("PlayerGui")
+if pg:FindFirstChild("CT369_Hub") then pg:CT369_Hub:Destroy() end
+
+local ACCENT = Color3.fromRGB(120,200,255)
+local BG = Color3.fromRGB(22,22,28)
+local PANEL = Color3.fromRGB(32,32,40)
+local TEXT = Color3.fromRGB(230,230,235)
+
+local state = {
+    speedOn=false, speedVal=16, jumpOn=false, jumpVal=250, infJumpOn=false,
+    flyOn=false, flySpeed=50, waterOn=false, antiAfkOn=false, noclipOn=false,
+    antiVoidOn=false, antiFlingOn=false, espOn=false, nameOn=true, skelOn=false,
+    boxVis=false, rainbowEsp=false, aimOn=false, aimSmooth=0.35, aimFOV=150,
+    aimAssistOn=false, aimAssistStrength=0.25, showAimViewer=false,
+    hitboxOn=false, hitboxSize=1, soundOn=false, soundId="",
+    autoRespawnOn=false, clickTpOn=false, orbitCamOn=false, orbitSpeed=0.5, hitLogOn=false,
+}
+
+local screen=Instance.new("ScreenGui", pg)
+screen.Name="CT369_Hub"; screen.ResetOnSpawn=false; screen.IgnoreGuiInset=true
+
+-- HIT LOGGER
+local hitLogFrame = Instance.new("ScrollingFrame", screen)
+hitLogFrame.Size = UDim2.new(0, 200, 0, 150); hitLogFrame.Position = UDim2.new(1, -220, 0.5, -75)
+hitLogFrame.BackgroundColor3 = BG; hitLogFrame.BackgroundTransparency = 0.3; hitLogFrame.BorderSizePixel = 0; hitLogFrame.Visible = false
+Instance.new("UICorner", hitLogFrame).CornerRadius = UDim.new(0, 8)
+local function logHit(text)
+    if not state.hitLogOn then return end
+    local lbl = Instance.new("TextLabel", hitLogFrame)
+    lbl.Size = UDim2.new(1, 0, 0, 16); lbl.BackgroundTransparency = 1; lbl.Text = text; lbl.TextColor3 = ACCENT; lbl.Font = Enum.Font.Code; lbl.TextSize = 11; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    task.delay(4, function() if lbl then lbl:Destroy() end end)
+end
+
+-- AIM VIEWER
+local aimViewer=Instance.new("Frame",screen)
+aimViewer.Size=UDim2.new(0,150,0,150); aimViewer.Position=UDim2.new(0.5,-75,0.5,-75)
+aimViewer.BackgroundTransparency=1; aimViewer.Visible=false
+local aimRing=Instance.new("Frame",aimViewer); aimRing.Size=UDim2.new(1,0,1,0)
+aimRing.BackgroundTransparency=1; Instance.new("UICorner",aimRing).CornerRadius=UDim.new(1,0)
+local ringStroke=Instance.new("UIStroke",aimRing); ringStroke.Color=ACCENT; ringStroke.Thickness=2; ringStroke.Transparency=0.4
+
+-- MAIN WINDOW
+local main=Instance.new("Frame",screen)
+main.Size=UDim2.new(0,460,0,340); main.Position=UDim2.new(0.5,-230,0.5,-170)
+main.BackgroundColor3=BG; main.BorderSizePixel=0; main.Active=true
+Instance.new("UICorner",main).CornerRadius=UDim.new(0,8)
+Instance.new("UIStroke",main).Color=ACCENT
+
+local titleBar=Instance.new("Frame",main)
+titleBar.Size=UDim2.new(1,0,0,34); titleBar.BackgroundColor3=PANEL; titleBar.BorderSizePixel=0
+Instance.new("UICorner",titleBar).CornerRadius=UDim.new(0,8)
+
+local title=Instance.new("TextLabel",titleBar)
+title.Size=UDim2.new(1,-70,1,0); title.Position=UDim2.new(0,14,0,0)
+title.BackgroundTransparency=1; title.Text="CT369"; title.Font=Enum.Font.GothamBold
+title.TextSize=15; title.TextColor3=ACCENT; title.TextXAlignment=Enum.TextXAlignment.Left
+
+local close=Instance.new("TextButton",titleBar)
+close.Size=UDim2.new(0,26,0,26); close.Position=UDim2.new(1,-32,0,4)
+close.BackgroundColor3=Color3.fromRGB(60,40,45); close.Text="X"; close.Font=Enum.Font.GothamBold
+close.TextSize=13; close.TextColor3=TEXT; close.BorderSizePixel=0
+Instance.new("UICorner",close).CornerRadius=UDim.new(0,6)
+close.MouseButton1Click:Connect(function() screen:Destroy() end)
+
+local minimize=Instance.new("TextButton",titleBar)
+minimize.Size=UDim2.new(0,26,0,26); minimize.Position=UDim2.new(1,-64,0,4)
+minimize.BackgroundColor3=Color3.fromRGB(45,50,60); minimize.Text="-"; minimize.Font=Enum.Font.GothamBold
+minimize.TextSize=16; minimize.TextColor3=TEXT; minimize.BorderSizePixel=0
+Instance.new("UICorner",minimize).CornerRadius=UDim.new(0,6)
+
+local reopen=Instance.new("TextButton",screen)
+reopen.Name="Reopen"; reopen.Size=UDim2.new(0,90,0,30); reopen.Position=UDim2.new(0,20,0,20)
+reopen.BackgroundColor3=BG; reopen.Text="CT369 ^"; reopen.Font=Enum.Font.GothamBold
+reopen.TextSize=12; reopen.TextColor3=ACCENT; reopen.BorderSizePixel=0; reopen.Visible=false
+Instance.new("UICorner",reopen).CornerRadius=UDim.new(0,6)
+
+minimize.MouseButton1Click:Connect(function() main.Visible=false; reopen.Visible=true end)
+reopen.MouseButton1Click:Connect(function() main.Visible=true; reopen.Visible=false end)
+
+local dragging, dragStart, startPos
+titleBar.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        dragging=true; dragStart=i.Position; startPos=main.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+        local d=i.Position-dragStart
+        main.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end end)
+
+local tabBar=Instance.new("Frame",main)
+tabBar.Size=UDim2.new(0,110,1,-34); tabBar.Position=UDim2.new(0,0,0,34)
+tabBar.BackgroundColor3=PANEL; tabBar.BorderSizePixel=0
+
+local content=Instance.new("Frame",main)
+content.Size=UDim2.new(1,-110,1,-34); content.Position=UDim2.new(0,110,0,34); content.BackgroundTransparency=1
+
+local tabs={"Main","Combat","Visual","Misc"}
+local pages={}
+local orderCount={}
+local function nextOrder(p) orderCount[p]=(orderCount[p] or 0)+1; return orderCount[p] end
+
+for i,name in ipairs(tabs) do
+    local page=Instance.new("ScrollingFrame",content)
+    page.Size=UDim2.new(1,-12,1,-12); page.Position=UDim2.new(0,6,0,6)
+    page.BackgroundTransparency=1; page.BorderSizePixel=0; page.ScrollBarThickness=4
+    page.CanvasSize=UDim2.new(0,0,0,0); page.AutomaticCanvasSize=Enum.AutomaticSize.Y; page.Visible=false
+    local lay=Instance.new("UIListLayout",page); lay.SortOrder=Enum.SortOrder.LayoutOrder; lay.Padding=UDim.new(0,6)
+    local pad=Instance.new("UIPadding",page); pad.PaddingTop=UDim.new(0,4)
+    pages[name]=page
+    local btn=Instance.new("TextButton",tabBar)
+    btn.Size=UDim2.new(1,-12,0,30); btn.Position=UDim2.new(0,6,0,6+(i-1)*34)
+    btn.BackgroundColor3=BG; btn.Text=name; btn.Font=Enum.Font.Gotham
+    btn.TextSize=13; btn.TextColor3=TEXT; btn.BorderSizePixel=0
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
+    btn.MouseButton1Click:Connect(function() for n,p in pairs(pages) do p.Visible=(n==name) end end)
+end
+pages["Main"].Visible=true
+
+local function toggle(pageName,label,def,cb)
+    local r=Instance.new("Frame",pages[pageName])
+    r.Size=UDim2.new(1,0,0,34); r.LayoutOrder=nextOrder(pageName)
+    r.BackgroundColor3=PANEL; r.BorderSizePixel=0
+    Instance.new("UICorner",r).CornerRadius=UDim.new(0,6)
+    local lbl=Instance.new("TextLabel",r); lbl.Size=UDim2.new(1,-60,1,0); lbl.Position=UDim2.new(0,10,0,0)
+    lbl.BackgroundTransparency=1; lbl.Text=label; lbl.Font=Enum.Font.Gotham; lbl.TextSize=12; lbl.TextColor3=TEXT; lbl.TextXAlignment=Enum.TextXAlignment.Left
+    local t=Instance.new("TextButton",r); t.Size=UDim2.new(0,40,0,20); t.Position=UDim2.new(1,-50,0.5,-10)
+    t.BackgroundColor3=def and ACCENT or Color3.fromRGB(55,55,65); t.Text=""; t.BorderSizePixel=0
+    Instance.new("UICorner",t).CornerRadius=UDim.new(1,0)
+    local knob=Instance.new("Frame",t); knob.Size=UDim2.new(0,16,0,16)
+    knob.Position=def and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8); knob.BackgroundColor3=Color3.fromRGB(240,240,245); knob.BorderSizePixel=0
+    Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
+    local s=def
+    t.MouseButton1Click:Connect(function()
+        s=not s; TweenService:Create(knob,TweenInfo.new(0.15),{Position=s and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)}):Play()
+        TweenService:Create(t,TweenInfo.new(0.15),{BackgroundColor3=s and ACCENT or Color3.fromRGB(55,55,65)}):Play()
+        if cb then cb(s) end
+    end)
+end
+
+local function slider(pageName,label,min,max,def,cb)
+    local r=Instance.new("Frame",pages[pageName])
+    r.Size=UDim2.new(1,0,0,46); r.LayoutOrder=nextOrder(pageName)
+    r.BackgroundColor3=PANEL; r.BorderSizePixel=0
+    Instance.new("UICorner",r).CornerRadius=UDim.new(0,6)
+    local lbl=Instance.new("TextLabel",r); lbl.Size=UDim2.new(1,-20,0,20); lbl.Position=UDim2.new(0,10,0,4)
+    lbl.BackgroundTransparency=1; lbl.Text=label..": "..tostring(def); lbl.Font=Enum.Font.Gotham; lbl.TextSize=12; lbl.TextColor3=TEXT; lbl.TextXAlignment=Enum.TextXAlignment.Left
+    local track=Instance.new("Frame",r); track.Size=UDim2.new(1,-20,0,6); track.Position=UDim2.new(0,10,0,30)
+    track.BackgroundColor3=Color3.fromRGB(55,55,65); track.BorderSizePixel=0; Instance.new("UICorner",track).CornerRadius=UDim.new(1,0)
+    local fill=Instance.new("Frame",track); fill.Size=UDim2.new((def-min)/(max-min),0,1,0); fill.BackgroundColor3=ACCENT; fill.BorderSizePixel=0
+    Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+    local grabbing=false
+    local function update(x)
+        local rel=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+        local val=math.floor(min+rel*(max-min)+0.5)
+        fill.Size=UDim2.new(rel,0,1,0); lbl.Text=label..": "..tostring(val)
+        if cb then cb(val) end
+    end
+    track.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then grabbing=true; update(i.Position.X) end end)
+    UserInputService.InputChanged:Connect(function(i) if grabbing and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then update(i.Position.X) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then grabbing=false end end)
+end
+
+local function button(pageName,label,cb)
+    local b=Instance.new("TextButton",pages[pageName])
+    b.Size=UDim2.new(1,0,0,30); b.LayoutOrder=nextOrder(pageName)
+    b.BackgroundColor3=PANEL; b.Text=label; b.Font=Enum.Font.Gotham; b.TextSize=12; b.TextColor3=TEXT; b.BorderSizePixel=0
+    Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
+    b.MouseButton1Click:Connect(cb)
+end
+
+local function textbox(pageName,label,def,cb)
+    local r=Instance.new("Frame",pages[pageName])
+    r.Size=UDim2.new(1,0,0,34); r.LayoutOrder=nextOrder(pageName)
+    r.BackgroundColor3=PANEL; r.BorderSizePixel=0; Instance.new("UICorner",r).CornerRadius=UDim.new(0,6)
+    local lbl=Instance.new("TextLabel",r); lbl.Size=UDim2.new(0,80,1,0); lbl.Position=UDim2.new(0,10,0,0)
+    lbl.BackgroundTransparency=1; lbl.Text=label; lbl.Font=Enum.Font.Gotham; lbl.TextSize=12; lbl.TextColor3=TEXT; lbl.TextXAlignment=Enum.TextXAlignment.Left
+    local tb=Instance.new("TextBox",r); tb.Size=UDim2.new(1,-100,0,22); tb.Position=UDim2.new(0,90,0.5,-11)
+    tb.BackgroundColor3=BG; tb.Text=def; tb.PlaceholderText="ID"
+    tb.Font=Enum.Font.Gotham; tb.TextSize=12; tb.TextColor3=TEXT; tb.BorderSizePixel=0; tb.ClearTextOnFocus=false
+    Instance.new("UICorner",tb).CornerRadius=UDim.new(0,6)
+    tb.FocusLost:Connect(function(enter) if enter and cb then cb(tb.Text) end end)
+end
+
+-- WIRING
+toggle("Main","Speed",false,function(on) state.speedOn=on end)
+slider("Main","Speed Value",16,200,16,function(v) state.speedVal=v; if lp.Character then local h=lp.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed=v end end end)
+toggle("Main","Super Jump",false,function(on) state.jumpOn=on; if lp.Character then local h=lp.Character:FindFirstChildOfClass("Humanoid"); if h then h.UseJumpPower=true; h.JumpPower=on and state.jumpVal or 50 end end end)
+slider("Main","Jump Power",50,1000,250,function(v) state.jumpVal=v; if lp.Character and state.jumpOn then local h=lp.Character:FindFirstChildOfClass("Humanoid"); if h then h.JumpPower=v end end end)
+toggle("Main","Infinite Jump",false,function(on) state.infJumpOn=on end)
+toggle("Main","Fly",false,function(on) state.flyOn=on; flySetup(on) end)
+slider("Main","Fly Speed",10,300,50,function(v) state.flySpeed=v end)
+toggle("Main","Noclip",false,function(on) state.noclipOn=on end)
+toggle("Main","Auto Respawn",false,function(on) state.autoRespawnOn=on end)
+
+toggle("Combat","Aimbot",false,function(on) state.aimOn=on end)
+slider("Combat","Aim Smoothness",1,100,35,function(v) state.aimSmooth=v/100 end)
+slider("Combat","Aim FOV",50,500,150,function(v) state.aimFOV=v end)
+toggle("Combat","Aim Assist (Scope)",false,function(on) state.aimAssistOn=on end)
+slider("Combat","Assist Strength",1,100,25,function(v) state.aimAssistStrength=v/100 end)
+toggle("Combat","Aim Viewer",false,function(on) state.showAimViewer=on; aimViewer.Visible=on end)
+toggle("Combat","Hitbox Expander",false,function(on) state.hitboxOn=on; applyHitbox() end)
+slider("Combat","Hitbox Size",1,30,1,function(v) state.hitboxSize=v; applyHitbox() end)
+
+toggle("Visual","ESP (Highlight)",false,function(on) state.espOn=on; refreshESP() end)
+toggle("Visual","Name Tags",true,function(on) state.nameOn=on; refreshESP() end)
+toggle("Visual","Fullbright",false,function(on)
+    Lighting.Ambient=on and Color3.fromRGB(255,255,255) or Color3.fromRGB(0,0,0)
+    Lighting.Brightness=on and 3 or 1
+end)
+
+button("Misc","Teleport to Cursor",function()
+    local char=lp.Character; if not char then return end
+    local hrp=char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+    local mp=UserInputService:GetMouseLocation(); local ray=Camera:ScreenPointToRay(mp.X,mp.Y)
+    local params=RaycastParams.new(); params.FilterDescendantsInstances={char}
+    local hit=Workspace:Raycast(ray.Origin,ray.Direction*500,params)
+    if hit then hrp.CFrame=CFrame.new(hit.Position+Vector3.new(0,3,0)) end
+end)
+toggle("Misc","Sound On Kill",false,function(on) state.soundOn=on end)
+textbox("Misc","Sound ID","",function(v) state.soundId=v end)
+button("Misc","Reset Character",function() if lp.Character then local h=lp.Character:FindFirstChildOfClass("Humanoid"); if h then h.Health=0 end end end)
+toggle("Misc","Hit Logger",false,function(on) state.hitLogOn=on; hitLogFrame.Visible=on end)
+
+-- LOGIC
+local flyBody, flyGyro
+function flySetup(on)
+    local char=lp.Character; if not char then return end
+    local hrp=char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+    if on then
+        local hum=char:FindFirstChildOfClass("Humanoid"); if hum then hum.PlatformStand=true end
+        flyBody=Instance.new("BodyVelocity",hrp); flyBody.MaxForce=Vector3.new(1e5,1e5,1e5); flyBody.Velocity=Vector3.zero
+        flyGyro=Instance.new("BodyGyro",hrp); flyGyro.MaxTorque=Vector3.new(1e5,1e5,1e5); flyGyro.P=1000
+    else
+        if flyBody then flyBody:Destroy(); flyBody=nil end
+        if flyGyro then flyGyro:Destroy(); flyGyro=nil end
+        local hum=char:FindFirstChildOfClass("Humanoid"); if hum then hum.PlatformStand=false end
+    end
+end
+
+local hitboxCache={}; local espCache={}
+function applyHitbox()
+    for _,data in pairs(hitboxCache) do if data.weld then data.weld:Destroy() end; if data.part then data.part:Destroy() end end; hitboxCache={}
+    if not state.hitboxOn or state.hitboxSize<=1 then return end
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=lp and plr.Character then
+            local hrp=plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local hit=Instance.new("Part"); hit.Size=Vector3.new(state.hitboxSize,state.hitboxSize,state.hitboxSize)
+                hit.Transparency=1; hit.CanCollide=false; hit.CanQuery=true; hit.Massless=true; hit.CFrame=hrp.CFrame; hit.Parent=plr.Character
+                local weld=Instance.new("WeldConstraint"); weld.Part0=hrp; weld.Part1=hit; weld.Parent=hit
+                hitboxCache[plr]={part=hit,weld=weld}
+            end
+        end
+    end
+end
+
+function refreshESP()
+    for _,entry in pairs(espCache) do if entry.highlight then entry.highlight:Destroy() end; if entry.billboard then entry.billboard:Destroy() end end; espCache={}
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=lp and plr.Character then
+            local entry={}
+            if state.espOn then local h=Instance.new("Highlight",plr.Character); h.FillColor=ACCENT; h.OutlineColor=Color3.fromRGB(255,255,255); h.FillTransparency=0.6; entry.highlight=h end
+            if state.nameOn then
+                local head=plr.Character:FindFirstChild("Head")
+                if head then
+                    local bb=Instance.new("BillboardGui",head); bb.Size=UDim2.new(0,100,0,20); bb.StudsOffset=Vector3.new(0,2.5,0); bb.AlwaysOnTop=true
+                    local lbl=Instance.new("TextLabel",bb); lbl.Size=UDim2.new(1,0,1,0); lbl.BackgroundTransparency=1; lbl.Text=plr.Name
+                    lbl.Font=Enum.Font.GothamBold; lbl.TextSize=13; lbl.TextColor3=ACCENT; lbl.TextStrokeTransparency=0.3
+                    entry.billboard=bb
+                end
+            end
+            espCache[plr]=entry
+        end
+    end
+end
+
+local function findTarget(fov)
+    local best,bestD=nil,math.huge; local mp=UserInputService:GetMouseLocation()
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=lp and plr.Character then
+            local p=plr.Character:FindFirstChild("Head")
+            if p then
+                local scr,on=Camera:WorldToViewportPoint(p.Position)
+                if on then local d=(Vector2.new(scr.X,scr.Y)-mp).Magnitude; if d<fov and d<bestD then bestD=d; best=p end end
+            end
+        end
+    end
+    return best
+end
+
+RunService.RenderStepped:Connect(function()
+    if state.speedOn and lp.Character then local h=lp.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed=state.speedVal end end
+    if state.noclipOn and lp.Character then for _,p in ipairs(lp.Character:GetDescendants()) do if p:IsA("BasePart") and p.CanCollide then p.CanCollide=false end end end
+    if state.flyOn and flyBody and flyBody.Parent then
+        local dir=Vector3.zero; if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir+=Camera.CFrame.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir-=Camera.CFrame.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir-=Camera.CFrame.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir+=Camera.CFrame.RightVector end
+        if dir.Magnitude>0 then dir=dir.Unit end; flyBody.Velocity=dir*state.flySpeed; flyGyro.CFrame=Camera.CFrame
+    end
+    if state.aimOn then local tgt=findTarget(state.aimFOV); if tgt then Camera.CFrame=Camera.CFrame:Lerp(CFrame.lookAt(Camera.CFrame.Position,tgt.Position),state.aimSmooth) end end
+    if state.aimAssistOn then
+        local scoping = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) or #UserInputService:GetTouches()>=2
+        if scoping then local tgt=findTarget(state.aimFOV); if tgt then Camera.CFrame=Camera.CFrame:Lerp(CFrame.lookAt(Camera.CFrame.Position,tgt.Position),state.aimAssistStrength) end end
+    end
+    if state.showAimViewer then local px=math.floor(state.aimFOV); aimViewer.Size=UDim2.new(0,px,0,px); aimViewer.Position=UDim2.new(0.5,-px/2,0.5,-px/2) end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if state.autoRespawnOn and lp.Character then local h=lp.Character:FindFirstChildOfClass("Hu
